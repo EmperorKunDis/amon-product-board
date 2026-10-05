@@ -10,7 +10,7 @@ const evidence={confirmed:'Potvrzené vazby',possible:'Možné souvislosti',stan
 function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
 function option(value,text){const n=el('option',text);n.value=value;return n;}
 function link(title,url){if(url&&!/^https?:/i.test(url)&&!url.startsWith('board/')&&!url.startsWith('media/'))return el('span',title+' · místní archiv');if(!url||/^(?!https?:)[a-z][a-z\d+.-]*:/i.test(url))return el('span','');const n=el('a',title);n.href=url;n.target='_blank';n.rel='noopener noreferrer';return n;}
-function image(r,preview){const path=preview||r.image;if(!path||/^https?:/i.test(path))return el('span','Náhled není uložen','thumb placeholder');const n=el('img');n.src=path;n.alt=r.name;n.loading='lazy';n.className=preview?'detail-image':'thumb';n.onerror=()=>n.replaceWith(el('span','Náhled není uložen','thumb placeholder'));return n;}
+function image(r,preview){const path=preview||r.image;if(!path||/^(?!https?:)[a-z][a-z\d+.-]*:/i.test(path))return el('span','Náhled není uložen','thumb placeholder');const n=el('img');n.src=path;n.alt=r.name;n.loading='lazy';n.className=preview?'detail-image':'thumb';n.onerror=()=>n.replaceWith(el('span','Náhled není uložen','thumb placeholder'));return n;}
 function button(title,fn,cls='detail-btn'){const n=el('button',title,cls);n.onclick=fn;return n;}
 const archive=window.AmonArchive,data=archive.meta,byid=new Map(),groups={};
 const loads=new Map();

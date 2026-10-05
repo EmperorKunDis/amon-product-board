@@ -53,7 +53,7 @@ for p in sorted((ROOT/'board/details').glob('*.js')):
 for p in (ROOT/'board/indices').glob('*.js'):
     value=readjs(p)
     if isinstance(value,list):
-        for r in value:r['image']=assetmap.get(r['image'],'')
+        for r in value:r['image']=assetmap.get(r['image'],r['image'] if r['image'].startswith('https://') else '')
     dump_gz(SITE/'board/indices'/(p.name+'.json.gz'),value)
 for name in ['data.js','filter.js','style.css','audit.html','audit.json','verification.json']:
     shutil.copyfile(ROOT/'board'/name,SITE/'board'/name)
