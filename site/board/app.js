@@ -1,0 +1,74 @@
+'use strict';
+(async()=>{
+const $=id=>document.getElementById(id),fmt=n=>n.toLocaleString('cs-CZ');
+const {normalize,matches}=window.AmonFilter;
+const state={kind:'products',company:'',page:1,size:300,gallery:true};
+const fields=['query','brand','year','month','catalog','collection','evidence','from','to'];
+const meanings={index_period:'Období zdrojového indexu (mimo filtr)',date_mention:'Zmínka data v textu (mimo filtr)',reference_date:'Datace citované normy (mimo filtr)',validity:'Platnost / vypršení (mimo filtr)',publication:'Vydání',revision:'Revize dokumentu',document_date:'Datum uvedené v dokumentu',publisher_label:'Datace vydavatele',article_date:'Datum článku / události',pdf_creation:'Vytvoření PDF',pdf_revision:'Změna PDF',archive:'Archivace',download:'Stažení',website_revision:'Změna webu',filename_hint:'Rok v názvu / cestě'};
+const kinds={products:'Produkt',documents:'Katalog / dokument',pages:'Stránka',images:'Obrázek',collections:'Kolekce',codes:'Artiklový výskyt',history:'Historický zdroj',sources:'Zdrojový podklad',unresolved:'Problematický podklad'};
+const evidence={confirmed:'Potvrzené vazby',possible:'Možné souvislosti',standalone:'Samostatný záznam',problem:'Problematický podklad'};
+function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
+function option(value,text){const n=el('option',text);n.value=value;return n;}
+function link(title,url){if(url&&!/^https?:/i.test(url)&&!url.startsWith('board/')&&!url.startsWith('media/'))return el('span',title+' · místní archiv');if(!url||/^(?!https?:)[a-z][a-z\d+.-]*:/i.test(url))return el('span','');const n=el('a',title);n.href=url;n.target='_blank';n.rel='noopener noreferrer';return n;}
+function image(r,preview){const path=preview||r.image;if(!path||/^https?:/i.test(path))return el('span','AMON','thumb placeholder');const n=el('img');n.src=path;n.alt=r.name;n.loading='lazy';n.className=preview?'detail-image':'thumb';n.onerror=()=>n.replaceWith(el('span','Náhled není uložen','thumb placeholder'));return n;}
+function button(title,fn,cls='detail-btn'){const n=el('button',title,cls);n.onclick=fn;return n;}
+const archive=window.AmonArchive,data=archive.meta,byid=new Map(),groups={};
+const loads=new Map();
+function loadScript(path){if(!loads.has(path))loads.set(path,(async()=>{const response=await fetch(path+'.json.gz');if(!response.ok)throw Error('Data nejsou dostupná: '+response.status);const value=await new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).json();const name=path.split('/').pop().replace(/\.js$/,'');if(path.includes('/details/'))archive.details[name]=value;else if(name.endsWith('-search'))archive.search[name.slice(0,-7)]=value;else archive.index[name]=value;})().catch(e=>{loads.delete(path);throw e;}));return loads.get(path);}
+async function ensureKind(kind){if(!groups[kind]){await loadScript('board/indices/'+kind+'.js');groups[kind]=archive.index[kind];for(const r of groups[kind])byid.set(r.id,r);}return groups[kind];}
+async function resolveRow(target){await ensureKind(target.kind);return byid.get(target.id);}
+let filtered=[],opener,detailHistory=[],detailSerial=0,applySerial=0;
+const detailLRU=[];
+async function getDetail(r){const path='board/details/'+r.chunk+'.js';await loadScript(path);const i=detailLRU.indexOf(r.chunk);if(i>=0)detailLRU.splice(i,1);detailLRU.push(r.chunk);while(detailLRU.length>5){const old=detailLRU.shift();delete archive.details[old];loads.delete('board/details/'+old+'.js');}return archive.details[r.chunk][r.id];}
+await Promise.all([ensureKind('products'),ensureKind('documents')]);
+function dateLabel(r){const values=[...new Set(r.dateValues.map(v=>v.length>=7?v.slice(5,7)+'/'+v.slice(0,4):v))];return (r.kind==='products'&&r.catalogs.length?'V katalogu ':'')+([...new Set(values)].slice(0,5).join(', ')||'Datace nedoložena')+(values.length>5?'…':'');}
+async function showDetail(r,source,back=false){
+ if(!byid.has(r.id))r=await resolveRow(r);
+ if(source){opener=source;detailHistory=[];}else if(!back&&$('detail').dataset.record)detailHistory.push($('detail').dataset.record);
+ $('detail').dataset.record=r.id;const token=++detailSerial,root=$('detail-content');root.replaceChildren(el('p','Načítám detail…'));
+ if(!$('detail').open)$('detail').showModal();
+ try{
+ const d=await getDetail(r);if(token!==detailSerial)return;root.replaceChildren();
+ const controls=el('div',undefined,'detail-links');if(detailHistory.length)controls.append(button('← Předchozí záznam',()=>{const id=detailHistory.pop();showDetail(byid.get(id),null,true);}));controls.append(button('Zpět k výsledkům',()=>$('detail').close()));root.append(controls);
+ const layout=el('div',undefined,'detail-layout'),media=el('div'),body=el('div');media.append(image(r,d.preview||r.image));const h=el('h2',r.name);h.id='detail-title';body.append(el('p',data.companies[r.company]+' / '+r.brand,'eyebrow'),h,el('p',kinds[r.kind]+' · '+evidence[r.evidence]),el('p',r.code?'Artikl / reference: '+r.code:''),el('p',dateLabel(r)),el('p',d.status));
+ if(r.kind==='products'&&r.catalogs.length)body.append(el('p','Vazba na dokument vychází ze zdrojového odkazu. Technický dokument může platit pro rodinu výrobků; nejde o potvrzení uvedení této varianty na trh.'));
+ const links=el('div',undefined,'detail-links');if(d.file)links.append(link(d.page?'Místní soubor · strana '+d.page:'Místní soubor',d.file+(d.page?'#page='+d.page:'')));if(d.url)links.append(link('Původní zdroj ↗',d.url));body.append(links);
+ if(d.archive_file)body.append(el('p','Originál je zachován v místním archivu; online je dostupný odkaz na vydavatele.'));if(d.unresolved_reason)body.append(el('p',d.unresolved_reason,'notice'));
+ if(Object.keys(d.properties).length){const dl=el('dl',undefined,'properties');for(const [k,v]of Object.entries(d.properties))dl.append(el('dt',k),el('dd',typeof v==='string'?v:JSON.stringify(v)));body.append(dl);}
+ layout.append(media,body);root.append(layout);
+ if(d.dates.length){root.append(el('h3','Doklady datace'+(d.date_conflict?' · více různých údajů':'')));const list=el('div',undefined,'date-evidence');for(const date of d.dates){const item=el('p');item.append(el('strong',(meanings[date.meaning]||date.meaning)+': '+date.value+' '),el('span','„'+date.raw+'“ · přesnost: '+date.precision+(date.page?' · strana '+date.page:'')),el('br'),link(date.source,date.source.split('#row=')[0].split('#line=')[0].split('#record=')[0]));if(date.context)item.append(el('small',date.context));list.append(item);}root.append(list);}
+ if(r.catalogs.length&&r.kind!=='documents'){const section=el('div');section.append(el('h3','Související katalogy a dokumenty'));for(const id of r.catalogs)section.append(button(byid.get(id).name+' · '+dateLabel(byid.get(id)),()=>showDetail(byid.get(id))));root.append(section);}
+ const imageTargets=[...new Map(d.relations.filter(e=>e.target.kind==='images').map(e=>[e.id,e.target])).values()];
+ if(imageTargets.length){const section=el('details'),galleryRoot=el('div'),more=el('div');section.append(el('summary','Místní galerie · '+imageTargets.length+' obrazových záznamů'),galleryRoot,more);let imageLimit=0;
+ const loadImages=async()=>{try{await ensureKind('images');imageLimit+=30;galleryRoot.className='detail-gallery';galleryRoot.replaceChildren();for(const target of imageTargets.slice(0,imageLimit)){const row=byid.get(target.id),item=el('div');item.append(image(row),button(row.name,()=>showDetail(row)));galleryRoot.append(item);}more.replaceChildren();if(imageLimit<imageTargets.length)more.append(button('Další obrázky',loadImages));}catch(e){more.replaceChildren(el('p',e.message));}};
+ more.append(button('Načíst místní náhledy',loadImages));root.append(section);}
+ const relations=el('section',undefined,'relations');relations.append(el('h3','Související záznamy ('+fmt(d.relations.length)+')'));
+ const select=el('select');select.setAttribute('aria-label','Typ souvisejících záznamů');select.append(option('','Všechny typy'),...[...new Set(d.relations.map(e=>(byid.get(e.id)||e.target)?.kind).filter(Boolean))].map(k=>option(k,kinds[k])));
+ const related=el('div'),more=el('div');let limit=60;
+ function renderRelations(){related.replaceChildren();more.replaceChildren();const edges=d.relations.filter(e=>!select.value||(byid.get(e.id)||e.target).kind===select.value);for(const e of edges.slice(0,limit)){const target=byid.get(e.id)||e.target;const item=el('div',undefined,'related-row');item.append(button((e.certainty==='possible'?'Možná souvislost · ':'')+kinds[target.kind]+' · '+target.name,()=>showDetail(target)),el('small',e.label+' · '+e.proof));related.append(item);}if(edges.length>limit)more.append(button('Načíst dalších 60 ('+(edges.length-limit)+' zbývá)',()=>{limit+=60;renderRelations();}));}
+ select.onchange=()=>{limit=60;renderRelations();};relations.append(select,related,more);renderRelations();root.append(relations);
+ const gallery=[...(Array.isArray(d.raw.gallery_urls)?d.raw.gallery_urls:[]),...(Array.isArray(d.raw.image_urls)?d.raw.image_urls:[])];if(gallery.length){const section=el('details');section.append(el('summary','Galerie · '+gallery.length+' zdrojových odkazů'));for(const u of gallery)section.append(link(u,u),el('br'));root.append(section);}
+ if(d.text){const section=el('details');section.append(el('summary','Uložený text'),el('pre',d.text));root.append(section);}
+ const raw=el('details');raw.append(el('summary','Původní parametry, aliasy a původ záznamu'),el('pre',JSON.stringify(d.raw,null,2)));for(const origin of d.origins)raw.append(link(origin,origin.split('#')[0]),el('br'));root.append(raw);
+ $('detail').scrollTop=0;
+ }catch(e){root.replaceChildren(el('p','Detail nelze načíst: '+e.message));}
+}
+function facets(){const rows=(groups[state.kind]||[]).filter(r=>!state.company||r.company===state.company);
+ for(const [id,list,label]of [['brand',[...new Set(rows.map(r=>r.brand))].sort().map(v=>[v,v]),'Všechny značky'],['year',[['unknown','Rok neznámý'],...[...new Set(rows.flatMap(r=>r.years))].sort((a,b)=>b-a).map(v=>[String(v),String(v)])],'Všechny roky'],['catalog',data.catalogs.filter(r=>!state.company||r.company===state.company).map(r=>[r.id,r.name]),'Všechny katalogy'],['collection',data.collections.filter(r=>!state.company||r.company===state.company).map(r=>[r.id,r.name]),'Všechny kolekce']]){const old=$(id).value;$(id).replaceChildren(option('',label),...list.map(([v,t])=>option(v,t)));$(id).value=[...$(id).options].some(o=>o.value===old)?old:'';}
+ $('scope-note').textContent='Přímé odkazy jsou potvrzené vazby. Shody čísel a názvů jsou možné souvislosti. Datace katalogu neprokazuje datum uvedení produktu. Období od–do vyžaduje doložený měsíc.';
+}
+async function apply(){const serial=++applySerial;state.page=1;const f=Object.fromEntries(fields.map(id=>[id,$(id).value]));f.company=state.company;f.query=normalize(f.query.trim());try{const kind=state.kind;await ensureKind(kind);if(f.query&&!archive.search[kind]){ $('count').textContent='Načítám textový index…';await loadScript('board/indices/'+kind+'-search.js');}if(serial!==applySerial)return;filtered=groups[kind].filter(r=>matches(r,f,archive.search[kind]?.[r.id]||normalize(r.name+' '+r.code+' '+r.brand)));render();}catch(e){$('count').textContent=e.message;}}
+function render(){const pages=Math.max(1,Math.ceil(filtered.length/state.size));state.page=Math.min(state.page,pages);const visible=filtered.slice((state.page-1)*state.size,state.page*state.size);$('count').textContent=fmt(filtered.length)+' záznamů · '+(filtered.length?fmt((state.page-1)*state.size+1)+'–'+fmt(Math.min(state.page*state.size,filtered.length)):'0');$('page-label').textContent='Strana '+state.page+' / '+fmt(pages);$('prev').disabled=state.page===1;$('next').disabled=state.page===pages;
+ const root=$('results');root.replaceChildren();if(!visible.length){root.append(el('p','Pro tuto kombinaci filtrů nejsou žádné záznamy.','empty'));return;}
+ if(state.gallery){const cards=el('div',undefined,'cards');for(const r of visible){const card=el('article',undefined,'card');const b=button('Detail ↗',()=>showDetail(r,b));card.dataset.id=r.id;card.append(image(r),el('span',data.companies[r.company]+' / '+r.brand,'sub'),el('h3',r.name,'record-title'),el('span',r.code||kinds[r.kind],'sub code'),el('span',dateLabel(r),'sub date-label'),el('span',evidence[r.evidence],'sub'),b);cards.append(card);}root.append(cards);
+ }else{const wrap=el('div',undefined,'table-wrap'),table=el('table'),head=el('thead'),tr=el('tr'),body=el('tbody');for(const title of ['Náhled','Produkt / zdroj','Firma / značka','Datace',''])tr.append(el('th',title));head.append(tr);for(const r of visible){const tr=el('tr');for(const child of [image(r),el('span',r.name+' '+r.code),el('span',r.brand),el('span',dateLabel(r))]){const td=el('td');td.append(child);tr.append(td);}const td=el('td'),b=button('Detail ↗',()=>showDetail(r,b));td.append(b);tr.append(td);body.append(tr);}table.append(head,body);wrap.append(table);root.append(wrap);}
+}
+for(const [n,title]of [[Object.values(data.counts).reduce((a,b)=>a+b,0),'produktových záznamů'],[data.catalogs.length,'PDF dokumentů'],[data.total,'záznamů archivu']]){const box=el('div',undefined,'stat');box.append(el('strong',fmt(n)),el('span',title));$('stats').append(box);}
+for(const [id,title]of [['','Všechny firmy'],...Object.entries(data.companies)]){const b=button(title,()=>{state.company=id;document.querySelectorAll('[data-company]').forEach(n=>n.setAttribute('aria-pressed',String(n===b)));facets();apply();},'');b.dataset.company=id;b.setAttribute('aria-pressed',String(!id));if(id)b.append(el('small',fmt(data.counts[id])));$('companies').append(b);}
+document.querySelectorAll('[data-kind]').forEach(b=>b.onclick=async()=>{state.kind=b.dataset.kind;await ensureKind(state.kind);document.querySelectorAll('[data-kind]').forEach(n=>n.setAttribute('aria-pressed',String(n===b)));facets();apply();});
+let timer;for(const id of fields)$(id).addEventListener(id==='query'?'input':'change',()=>{clearTimeout(timer);timer=setTimeout(apply,id==='query'?160:0);});
+$('size').onchange=()=>{state.size=Number($('size').value);state.page=1;render();};$('reset').onclick=()=>{state.company='';for(const id of fields)$(id).value='';document.querySelectorAll('[data-company]').forEach(n=>n.setAttribute('aria-pressed',String(!n.dataset.company)));facets();apply();};
+for(const [id,gallery]of [['table-view',false],['grid-view',true]])$(id).onclick=()=>{state.gallery=gallery;$('table-view').setAttribute('aria-pressed',String(!gallery));$('grid-view').setAttribute('aria-pressed',String(gallery));render();};
+for(const [id,delta]of [['prev',-1],['next',1]])$(id).onclick=()=>{state.page+=delta;render();document.querySelector('.results-toolbar').scrollIntoView({block:'start'});};
+$('close').onclick=()=>$('detail').close();$('detail').onclose=()=>{++detailSerial;opener?.focus();};facets();apply();
+})();

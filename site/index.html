@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AMON & Co. — společný produktový board</title>
+<link rel="stylesheet" href="board/style.css"><script defer src="board/data.js"></script><script defer src="board/filter.js"></script><script defer src="board/app.js"></script>
+</head>
+<body>
+<header class="masthead"><div class="ornament" aria-hidden="true">❧</div><div class="brand"><p class="eyebrow">MATERIÁLY · KOLEKCE · KATALOGY</p><h1>AMON <span>&amp;</span> Co.</h1><p class="brandline">SPOLEČNÝ PRODUKTOVÝ BOARD</p></div><div class="header-note">Tři firmy.<br>Jeden přehled.<small>Archiv veřejných podkladů / 1996–2026</small></div></header>
+<main>
+<section class="intro"><div><p class="eyebrow">PRACOVNÍ KOLEKCE</p><h2>Objevte celý archiv.</h2><p>Produkty, materiály a katalogy na jednom místě.</p></div><div id="stats" class="stats"></div></section>
+<div class="company-bar" id="companies" aria-label="Firma"></div>
+<nav id="tabs" aria-label="Obsah archivu"><button data-kind="products" aria-pressed="true">Produkty</button><button data-kind="documents" aria-pressed="false">Katalogy &amp; dokumenty</button><button data-kind="pages" aria-pressed="false">Stránky katalogů</button><button data-kind="brochures" aria-pressed="false">Digitální brožury</button><button data-kind="collections">Kolekce</button><button data-kind="images">Obrázky a galerie</button><button data-kind="codes">Artiklové výskyty</button><button data-kind="sources">Zdrojové podklady</button><button data-kind="unresolved">Problematické podklady</button><button data-kind="history" aria-pressed="false">Historické zdroje</button></nav>
+<section class="filters" aria-label="Filtrování archivu">
+<label class="search">Hledání<input id="query" type="search" placeholder="Název, artikl, kolekce nebo text…"></label>
+<label>Značka<select id="brand"><option value="">Všechny značky</option></select></label>
+<label>Rok<select id="year"><option value="">Všechny roky</option><option value="unknown">Rok neznámý</option></select></label>
+<label>Období od<input id="from" type="month"></label><label>Do<input id="to" type="month"></label>
+<label class="catalog-filter">Katalog<select id="catalog"><option value="">Všechny katalogy</option></select></label>
+<label>Měsíc<select id="month"><option value="">Všechny měsíce</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select></label><label>Kolekce<select id="collection"><option value="">Všechny kolekce</option></select></label><label>Stav doložení<select id="evidence"><option value="">Všechny stavy</option><option value="confirmed">Potvrzené vazby</option><option value="possible">Možné souvislosti</option><option value="standalone">Samostatný záznam</option><option value="problem">Problematický podklad</option></select></label><button id="reset" class="reset">Vymazat filtry ↺</button>
+</section>
+<p id="scope-note" class="scope-note"></p>
+<section class="result-section" aria-label="Výsledky"><div class="results-toolbar"><p id="count" role="status" aria-live="polite">Načítám archiv…</p><div class="view-controls"><button id="table-view" aria-pressed="false" title="Kompaktní řádky">Řádky</button><button id="grid-view" aria-pressed="true" title="Obrázková galerie">Galerie</button><label>Na stránku<select id="size"><option>75</option><option>150</option><option selected>300</option></select></label></div></div>
+<div id="results"></div><div class="paging"><button id="prev">← Předchozí</button><span id="page-label"></span><button id="next">Další →</button></div></section>
+<details class="method"><summary>O datech a datování</summary><p>Všechny uložené exporty a podklady jsou dohledatelné. Přímé odkazy a přesné identity jsou potvrzené vazby; shody artiklových čísel nebo názvů jsou pouze možné souvislosti. Filtry data používají doložené datum dokumentu, vydání, revize či článku. Vytvoření PDF, archivace, stažení a rok v názvu zůstávají oddělené v detailu. Výskyt produktu v datovaném katalogu není datem uvedení produktu. Externí galerie se bez otevření odkazu nestahují. Příslušnost k archivu není potvrzením výroby AMON.</p><p><a href="board/audit.html">Kontrolní přehled importu a vazeb</a></p><p>Online vydání zobrazuje celý datový index a optimalizované místní náhledy. Originální soubory zůstávají v místním archivu; jejich veřejné zdroje jsou uvedeny v detailech.</p></details>
+</main><footer><strong>AMON &amp; Co.</strong><span>Interní rešeršní přehled · původní zdroje u každého záznamu</span></footer>
+<dialog id="detail" aria-labelledby="detail-title"><div class="dialog-top"><p class="eyebrow">DETAIL ZÁZNAMU</p><button id="close" aria-label="Zavřít detail">Zavřít ×</button></div><div id="detail-content"></div></dialog>
+<noscript>Pro zobrazení a filtrování archivu zapněte JavaScript.</noscript>
+</body></html>

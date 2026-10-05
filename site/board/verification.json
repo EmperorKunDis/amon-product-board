@@ -1,0 +1,9 @@
+{
+  "records": 216943,
+  "bidirectional_relationships": 1045533,
+  "local_files": 169949,
+  "preserved_variant_mismatches": 57,
+  "quarantined_records": 1605,
+  "status": "PASS",
+  "visual_verification": "Separate browser inspection required"
+}
